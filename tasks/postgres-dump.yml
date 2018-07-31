@@ -1,0 +1,23 @@
+- name: actions under postgres user
+  become: yes
+  become_user: postgres
+  block:
+    - name: get postgres path
+      shell: echo $HOME
+      register: pgpath
+
+    - name: get dump of engine database
+      postgresql_db:
+        name: "{{ ovirt_engine_db_dump_engine_db['ENGINE_DB_DATABASE'] }}"
+        target: "{{ engine_remote_dump_file | default(pgpath.stdout + '/engine.tar') }}"
+        target_opts: '-F t'
+        state: dump
+      when: ovirt_engine_db_dump
+
+    - name: get dump of dwh database
+      postgresql_db:
+        name: "{{ ovirt_engine_db_dump_dwh_db['DWH_DB_DATABASE'] }}"
+        target: "{{ dwh_remote_dump_file | default(pgpath.stdout + '/dwh.tar') }}"
+        target_opts: '-F t'
+        state: dump
+      when: ovirt_engine_db_dump_dwh

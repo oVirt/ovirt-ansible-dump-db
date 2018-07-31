@@ -1,0 +1,46 @@
+---
+- name: slurp read engine config file
+  slurp:
+    src: "{{ ovirt_engine_etc_conf_path }}/10-setup-database.conf"
+  register: file_content
+  when: ovirt_engine_db_dump
+
+- name: matching related DB configs
+  set_fact:
+   decoded_content: "{{ ((file_content['content'] | b64decode).split('\n') | select('match', 'ENGINE_DB*') | list) }}"
+  when: ovirt_engine_db_dump
+
+- name: set facts for engine variables
+  set_fact:
+    ovirt_engine_db_dump_engine_db: >
+      {{
+        ovirt_engine_db_dump_engine_db | default({}) |
+        combine(
+          dict([ [item.partition('=')[0], item.partition('=')[2] | regex_replace('\"', '')] ])
+        )
+      }}
+  with_items: "{{ decoded_content }}"
+  when: ovirt_engine_db_dump
+
+- name: slurp read dwh config file
+  slurp:
+    src: "{{ ovirt_engine_etc_conf_path }}/10-setup-dwh-database.conf"
+  register: file_content
+  when: ovirt_engine_db_dump_dwh
+
+- name: matching related DB configs
+  set_fact:
+   decoded_content: "{{ ((file_content['content'] | b64decode).split('\n') | select('match', 'DWH_DB*') | list) }}"
+  when: ovirt_engine_db_dump_dwh
+
+- name: set facts for dwh variables
+  set_fact:
+    ovirt_engine_db_dump_dwh_db: >
+      {{
+        ovirt_engine_db_dump_dwh_db | default({}) |
+        combine(
+          dict([ [item.partition('=')[0], item.partition('=')[2] | regex_replace('\"', '')] ])
+        )
+      }}
+  with_items: "{{ decoded_content }}"
+  when: ovirt_engine_db_dump_dwh
